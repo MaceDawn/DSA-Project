@@ -22,12 +22,20 @@ public function main() {
     http:Client programmeClient = check new (BASE_URL);
 
     // 1. Get all programmes
-      Programme[] programmes = check programmeClient-> get("/programme/getprogrammes") ;
+      Programme[] programmes = check programmeClient->/programmes;
     io:println("GET request:" + programmes.toJsonString());
 
 
     // 2. Add a new programme
-    Programme addProgrammeResponse = check programmeClient->/programmes.post("/programme/addProgramme");
+    Programme addProgrammeResponse = check programmeClient->/programmes.post({
+           code: "07BENG",
+        nqfLevel: 7,
+        faculty: "Engineering",
+        department: "Mechanical Engineering",
+        registrationDate: "2023",
+        courses: [{name: "Thermodynamics", code: "THER620S", nqfLevel: 6}]
+
+    });
    
       io:println("\nPOST request:" + programmes.toJsonString());
 
