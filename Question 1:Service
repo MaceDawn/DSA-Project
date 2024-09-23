@@ -1,0 +1,111 @@
+import ballerina/http;
+
+table<Programme> key(code) programmeTable = table[
+    {code: "07BCMS", nqfLevel: 7, faculty: "Computing and Informatics", department: "Computer Science", registrationDate: "2018", courses: [{name: "Distributed Systems and Applications", code: "DSA612S", nqfLevel: 5}]},
+    {code: "07BECO", nqfLevel: 7, faculty: "Economics, Human Sciences and Education", department: "Economics,Accounting and Finance", registrationDate: "2016", courses: [{name: "Public Finance", code: "PFN712S", nqfLevel: 7}]},
+    { code: "07BGAC",nqfLevel: 7, faculty: "Economics, Human Sciences and Education", department: "Economics, Accounting and Finance",registrationDate: "2025", courses: [{name: "Taxation 202", code:"TAX612S", nqfLevel: 6}]},
+    { code: "08BMEG" , nqfLevel: 7, faculty:"Engineering and the Built Environment" , department: "Civil, Mining and Process Minning", registrationDate: "2019", courses: [{ name:"Numerical Methods",code:"NMS620S", nqfLevel:6}]},
+    { code:"07BAIT", nqfLevel: 7, faculty: "Computing and Informatics", department: "Informatics",registrationDate: "2023", courses: [{name: "Database Programming", code:"DPG612S", nqfLevel: 6}]}
+];
+
+type Programme record {
+    readonly string code;
+    int nqfLevel;
+    string faculty;
+    string department;
+    string registrationDate; // Year as string
+    Course[] courses;
+};
+
+type Course record {
+    string name;
+    string code;
+    int nqfLevel;
+};
+
+// Define the service
+service /programme on new http:Listener(9090) {
+    // Retrieve a list of all programmes
+    resource function get getprogrammes() returns Programme[] {
+        return programmeTable.toArray();
+    }
+
+    // Add a new programme
+    resource function post addProgramme(Programme prag) returns Programme|error {
+        if (programmeTable.hasKey(prag.code)) {
+            return error("Programme with this code already exists.");
+        }
+        programmeTable.add(prag);
+        return prag;
+    }
+
+    // Retrieve a specific programme by code
+    resource function get programmeByCode(string code) returns Programme|error {
+        Programme? prag = programmeTable[code];
+        if (prag is Programme) {
+            return prag;
+        } else {
+            return error("Programme not found.");
+        }
+    }
+
+    // Update an existing programme (except the code)
+    resource function put updateProgramme(string code, Programme updatedPrag) returns Programme|error {
+        if (!programmeTable.hasKey(code)) {
+            return error("Programme not found.");
+        }
+        
+        Programme? existingPrag = programmeTable[code];
+        if (existingPrag is Programme) {
+            Programme updatedProgramme = {
+                code: existingPrag.code,
+                nqfLevel: updatedPrag.nqfLevel,
+                faculty: updatedPrag.faculty,
+                department: updatedPrag.department,
+                registrationDate: updatedPrag.registrationDate,
+                courses: updatedPrag.courses
+            };
+            Programme _ = programmeTable.remove(code);
+            programmeTable.add(updatedProgramme);
+            return updatedProgramme;
+        } else {
+            return error("Programme not found.");
+        }
+    }
+
+    // Delete a programme by code
+    resource function delete programmeByCode(string code) returns string|error {
+        if (!programmeTable.hasKey(code)) {
+            return error("Programme not found.");
+        }
+        _ = programmeTable.remove(code);
+        return "Programme deleted successfully.";
+    }
+
+    // Retrieve all programmes that are due for review (5+ years since registration)
+    resource function get programmesDueForReview() returns Programme[]|error {
+        int currentYear = 2024; // Assuming current year
+        Programme[] dueForReview = [];
+        foreach Programme prag in programmeTable.toArray() {
+            int? registrationYear = check int:fromString(prag.registrationDate); // Convert registration date to int
+            if registrationYear is int {
+                int yearsSinceRegistration = currentYear - registrationYear;
+                if (yearsSinceRegistration >= 5) {
+                    dueForReview.push(prag);
+                }
+            }
+        }
+        return dueForReview;
+    }
+
+    // Retrieve all programmes in the same faculty
+    resource function get programmesByFaculty(string faculty) returns Programme[] {
+        Programme[] facultyProgrammes = [];
+        foreach Programme prag in programmeTable.toArray() {
+            if (prag.faculty == faculty) {
+                facultyProgrammes.push(prag);
+            }
+        }
+        return facultyProgrammes;
+    }
+}
