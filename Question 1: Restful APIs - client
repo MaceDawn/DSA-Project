@@ -1,0 +1,73 @@
+import ballerina/http;
+import ballerina/io;
+
+type Programme record {
+    string code;
+    int nqfLevel;
+    string faculty;
+    string department;
+    string registrationDate;
+    Course[] courses;
+};
+
+type Course record {
+    string name;
+    string code;
+    int nqfLevel;
+};
+
+final string BASE_URL = "http://localhost:8080/programme";
+
+public function main() {
+    http:Client programmeClient = check new (BASE_URL);
+
+    // 1. Get all programmes
+      Programme[] programmes = check programmeClient-> get("/programme/getprogrammes") ;
+    io:println("GET request:" + programmes.toJsonString());
+
+
+    // 2. Add a new programme
+    Programme addProgrammeResponse = check programmeClient->/programmes.post("/programme/addProgramme");
+   
+      io:println("\nPOST request:" + programmes.toJsonString());
+
+    // 3. Get a specific programme by code
+    
+    io:println("Fetching programme by code '07BENG':");
+    http:Response programmeByCodeResponse = check programmeClient->get("/07BENG");
+    Programme programmeByCode = check programmeByCodeResponse.getPayload();
+    io:println("Programme fetched: ", programmeByCode);
+
+    // 4. Update an existing programme
+    io:println("Updating programme with code '07BENG':");
+    Programme updatedProgrammeData = {
+        code: "07BENG",
+        nqfLevel: 8,
+        faculty: "Engineering",
+        department: "Mechanical Engineering",
+        registrationDate: "2023",
+        courses: [{name: "Advanced Thermodynamics", code: "THER720S", nqfLevel: 7}]
+    };
+    http:Response updateProgrammeResponse = check programmeClient->put("/07BENG", updatedProgrammeData);
+    Programme updatedProgramme = check updateProgrammeResponse.getPayload();
+    io:println("Programme updated: ", updatedProgramme);
+
+    // 5. Delete a programme by code
+    io:println("Deleting programme with code '07BENG':");
+    http:Response deleteProgrammeResponse = check programmeClient->delete("/07BENG");
+    string deletionResult = check deleteProgrammeResponse.getTextPayload();
+    io:println(deletionResult);
+
+    // 6. Get programmes due for review
+    io:println("Fetching programmes due for review:");
+    http:Response programmesDueForReviewResponse = check programmeClient->get("/review");
+    Programme[] dueForReviewProgrammes = check programmesDueForReviewResponse.getPayload();
+    io:println("Programmes due for review: ", dueForReviewProgrammes);
+
+    // 7. Get programmes by faculty
+    io:println("Fetching programmes by faculty 'Computing and Informatics':");
+    http:Response programmesByFacultyResponse = check programmeClient->get("/faculty/Computing and Informatics");
+    Programme[] facultyProgrammes = check programmesByFacultyResponse.getPayload();
+    io:println("Programmes by faculty: ", facultyProgrammes);
+}
+
